@@ -1,0 +1,9 @@
+ColorSquare 1.0 ColorSquare.qml
+ColorSwatch 1.0 ColorSwatch.qml
+HexField 1.0 HexField.qml
+InlineOklchPicker 1.0 InlineOklchPicker.qml
+JsonProcess 1.0 JsonProcess.qml
+PaletteHero 1.0 PaletteHero.qml
+PaletteLabel 1.0 PaletteLabel.qml
+PalettePreview 1.0 PalettePreview.qml
+PaletteRow 1.0 PaletteRow.qml

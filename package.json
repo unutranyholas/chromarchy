@@ -1,0 +1,45 @@
+{
+  "name": "chromarchy",
+  "version": "0.8.0",
+  "private": true,
+  "description": "A perceptual Omarchy palette editor and managed-theme plugin.",
+  "license": "MIT",
+  "author": "unutranyholas",
+  "type": "module",
+  "scripts": {
+    "knip": "knip"
+  },
+  "dependencies": {
+    "@radix-ui/colors": "3.0.0",
+    "bezier-easing": "^3.0.1",
+    "colorjs.io": "0.5.2",
+    "valibot": "^1.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.0",
+    "knip": "^6.33.0",
+    "vite-plus": "0.3.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.24.0",
+      "onFail": "download"
+    }
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "knip": {
+    "entry": [
+      "src/chromarchy.ts",
+      "src/**/*.test.ts"
+    ],
+    "project": [
+      "src/**/*.ts"
+    ],
+    "ignoreBinaries": [
+      "omarchy"
+    ]
+  }
+}

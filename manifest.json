@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "unutranyholas.chromarchy",
+  "name": "Chromarchy",
+  "version": "0.8.0",
+  "author": "unutranyholas",
+  "license": "MIT",
+  "homepage": "https://github.com/unutranyholas/chromarchy",
+  "description": "Design and safely apply a perceptual Omarchy palette.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "plugin/BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Chromarchy",
+    "description": "Design a perceptual Omarchy palette.",
+    "category": "Appearance",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
