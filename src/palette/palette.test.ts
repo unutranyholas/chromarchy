@@ -30,6 +30,39 @@ function lightness(colors: readonly string[]): number[] {
 }
 
 describe("strict Radix palette generation", () => {
+  it("matches the released 0.8 palette", () => {
+    expect(generatePalette(TEST_CONFIG)).toMatchObject({
+      colors: {
+        lighter_background: "#ededee",
+        background: "#e5e5e7",
+        dark_background: "#dddee1",
+        darker_background: "#d5d6da",
+        muted: "#505159",
+        dark_foreground: "#6c6e78",
+        light_foreground: "#1e1f24",
+        foreground: "#1e1f24",
+        bright_foreground: "#1e1f24",
+        accent: "#efba00",
+        selection: "#f8d982",
+        red: "#ce2c31",
+        bright_red: "#641723",
+        yellow: "#a06e00",
+        bright_yellow: "#473b1f",
+        green: "#00824d",
+        bright_green: "#193b2d",
+        cyan: "#007ca3",
+        bright_cyan: "#0d3c48",
+        blue: "#0072de",
+        bright_blue: "#113264",
+        magenta: "#953ea3",
+        bright_magenta: "#53195d",
+        orange: "#d14e00",
+        brown: "#815e46",
+      },
+      accentContrast: "#292109",
+    });
+  });
+
   it("generates 12-step gray and accent scales", () => {
     const radix = generateRadixColors({
       appearance: "light",

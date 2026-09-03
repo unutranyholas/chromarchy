@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
+import QtQml.WorkerScript
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
@@ -42,6 +43,7 @@ Panel {
   property string pickerTarget: ""
   property bool stateLoaded: false
   property bool touched: false
+  property bool undoAvailable: false
   property bool mutationRunning: false
   property bool seedEditing: false
   property string errorText: ""
@@ -50,10 +52,8 @@ Panel {
   property int latestGenerationRequest: 0
   property int latestStateRequest: 0
   property int latestMutationRequest: 0
-  property var pendingGeneration: null
+  property string mutationAction: ""
   property bool generationPending: false
-  property bool generatorStarted: false
-  property string generatorStderr: ""
   property bool cursorActive: false
   property string focusSection: "apply"
   property string pickerReturnSection: ""
@@ -79,6 +79,7 @@ Panel {
   readonly property var visibleSections: {
     const result = ["apply"]
     if (root.touched) result.push("revert")
+    else if (root.undoAvailable) result.push("undo")
     result.push("mode", "seed:accent", "seed:neutral", "seed:surface")
     root.tokenRows.forEach(row => row.forEach(key => result.push("token:" + key)))
     root.terminalKeys.forEach(key => result.push("terminal:" + key))
@@ -113,7 +114,7 @@ Panel {
       ? root.pickerTarget.substring("token:".length)
       : ""
   readonly property string heroMeta: root.mutationRunning
-    ? "Painting the desktop"
+    ? (root.mutationAction === "undo" ? "Restoring the desktop" : "Painting the desktop")
     : root.generating
       ? "Mixing pigments"
       : root.touched
@@ -127,7 +128,7 @@ Panel {
   onTouchedChanged: settleHeroMeta()
   onMutationRunningChanged: settleHeroMeta()
   onGeneratingChanged: settleHeroMeta()
-  onOpenedChanged: if (!opened) root.stopGenerator()
+  onOpenedChanged: if (!opened) root.cancelGeneration()
   onVisibleSectionsChanged: {
     if (root.visibleSections.indexOf(root.focusSection) < 0)
       root.focusSection = root.visibleSections[0]
@@ -312,32 +313,14 @@ Panel {
   function runGenerator() {
     const id = ++root.requestSerial
     root.latestGenerationRequest = id
-    root.pendingGeneration = {
+    root.generationPending = true
+    generator.sendMessage({
       id: id,
       config: root.configObject()
-    }
-    root.generationPending = true
-    if (!generator.running)
-      generator.running = true
-    else
-      root.flushGenerator()
+    })
   }
 
-  function flushGenerator() {
-    if (!root.generatorStarted || !root.pendingGeneration) return
-    generator.write(JSON.stringify(root.pendingGeneration) + "\n")
-    root.pendingGeneration = null
-  }
-
-  function generatorCompleted(line) {
-    let response
-    try {
-      response = JSON.parse(line)
-    } catch (error) {
-      root.generationPending = false
-      root.errorText = "Could not generate palette: " + error
-      return
-    }
+  function generatorCompleted(response) {
     if (response.id !== root.latestGenerationRequest) return
     root.generationPending = false
     if (response.error) {
@@ -348,17 +331,16 @@ Panel {
     root.errorText = ""
   }
 
-  function stopGenerator() {
+  function cancelGeneration() {
     generateDelay.stop()
-    root.pendingGeneration = null
     root.generationPending = false
     root.latestGenerationRequest = ++root.requestSerial
-    if (generator.running) generator.running = false
   }
 
   function applyStateObject(state) {
     root.loadedConfig = root.copy(state.config || ({}))
     root.setControls(root.loadedConfig)
+    root.undoAvailable = state.undoAvailable === true
     root.stateLoaded = true
     root.touched = false
     root.pickerReturnSection = ""
@@ -373,7 +355,6 @@ Panel {
     root.pickerTarget = ""
     if (root.mutationRunning || stateReader.running) return
     generateDelay.stop()
-    root.pendingGeneration = null
     root.generationPending = false
     root.latestGenerationRequest = ++root.requestSerial
     const id = ++root.requestSerial
@@ -401,15 +382,31 @@ Panel {
     if (!root.touched || root.busy || !root.proposalReady) return
     root.errorText = ""
     root.mutationRunning = true
+    root.mutationAction = "apply"
     root.latestStateRequest = 0
     const id = ++root.requestSerial
     root.latestMutationRequest = id
     mutator.start([
       root.helper,
       "apply",
-      "--config-json",
-      JSON.stringify(root.configObject())
+      "--recipe-json",
+      JSON.stringify({
+        version: 1,
+        config: root.configObject(),
+        colors: root.colors
+      })
     ], id)
+  }
+
+  function undoPalette() {
+    if (root.mutationRunning || stateReader.running || !root.undoAvailable) return
+    root.errorText = ""
+    root.mutationRunning = true
+    root.mutationAction = "undo"
+    root.latestStateRequest = 0
+    const id = ++root.requestSerial
+    root.latestMutationRequest = id
+    mutator.start([root.helper, "undo"], id)
   }
 
   function mutationCompleted(requestId, exitCode, exitStatus, stdoutText, stderrText) {
@@ -417,7 +414,7 @@ Panel {
     if (exitCode !== 0 || exitStatus !== 0) {
       root.mutationRunning = false
       root.errorText = root.helperError(stderrText, stdoutText,
-        "Could not apply palette")
+        root.mutationAction === "undo" ? "Could not undo palette" : "Could not apply palette")
       return
     }
     try {
@@ -426,7 +423,9 @@ Panel {
       root.mutationRunning = false
     } catch (error) {
       root.mutationRunning = false
-      root.errorText = "Could not apply palette: " + error
+      root.errorText = (root.mutationAction === "undo"
+        ? "Could not undo palette: "
+        : "Could not apply palette: ") + error
     }
   }
 
@@ -514,6 +513,7 @@ Panel {
     if (root.focusSection.indexOf("picker:") === 0) root.closeCursorPicker()
     else if (root.focusSection === "apply") root.applyPalette()
     else if (root.focusSection === "revert") root.revert()
+    else if (root.focusSection === "undo") root.undoPalette()
     else if (root.focusSection === "mode") root.toggleMode()
     else if (root.focusSection.indexOf("seed:") === 0) {
       const key = root.focusSection.substring(5)
@@ -547,30 +547,10 @@ Panel {
     }
   }
 
-  Process {
+  WorkerScript {
     id: generator
-    command: [root.helper, "worker"]
-    stdinEnabled: true
-    stdout: SplitParser {
-      onRead: function(line) { root.generatorCompleted(line) }
-    }
-    stderr: SplitParser {
-      onRead: function(line) {
-        root.generatorStderr += (root.generatorStderr ? "\n" : "") + line
-      }
-    }
-    onStarted: {
-      root.generatorStarted = true
-      root.generatorStderr = ""
-      root.flushGenerator()
-    }
-    onExited: function(exitCode, exitStatus) {
-      root.generatorStarted = false
-      if (!root.generationPending) return
-      root.generationPending = false
-      root.errorText = root.generatorStderr
-        || "Palette generator stopped (" + exitCode + "/" + exitStatus + ")"
-    }
+    source: "PaletteWorker.mjs"
+    onMessage: message => root.generatorCompleted(message)
   }
 
   JsonProcess {
@@ -711,17 +691,23 @@ Panel {
                 secondaryControl: Component {
                   PanelActionButton {
                     iconText: "󰑐"
-                    tooltipText: "Revert unapplied changes"
+                    tooltipText: root.touched
+                      ? "Revert unapplied changes"
+                      : "Undo applied palette"
                     foreground: hero.foreground
                     fontFamily: hero.fontFamily
                     fontSize: Style.font.bodySmall
                     size: Style.space(18)
-                    visible: root.touched
+                    visible: root.touched || root.undoAvailable
                     enabled: !root.mutationRunning
-                    hasCursor: root.cursorActive && root.focusSection === "revert"
+                    hasCursor: root.cursorActive
+                      && root.focusSection === (root.touched ? "revert" : "undo")
                     onClicked: {
                       keyCatcher.forceActiveFocus()
-                      root.revert()
+                      if (root.touched)
+                        root.revert()
+                      else
+                        root.undoPalette()
                     }
                   }
                 }

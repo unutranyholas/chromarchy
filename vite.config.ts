@@ -12,17 +12,18 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
   },
   pack: {
-    entry: ["src/chromarchy.ts"],
+    entry: ["src/palette-engine.mts"],
     format: ["esm"],
-    platform: "node",
-    target: "node24",
+    platform: "neutral",
+    target: "es2015",
+    fixedExtension: true,
     outDir: "plugin/dist",
     clean: true,
     sourcemap: false,
     dts: false,
     deps: {
-      alwaysBundle: ["@radix-ui/colors", "bezier-easing", "colorjs.io", "valibot"],
-      onlyBundle: ["@radix-ui/colors", "bezier-easing", "colorjs.io", "valibot"],
+      alwaysBundle: ["@radix-ui/colors", "bezier-easing"],
+      onlyBundle: ["@radix-ui/colors", "bezier-easing"],
     },
   },
 });

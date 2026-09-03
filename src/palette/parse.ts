@@ -1,5 +1,4 @@
-import Color from "colorjs.io";
-import * as v from "valibot";
+import Color from "../color/color";
 
 import type {
   HexColor,
@@ -7,7 +6,6 @@ import type {
   PaletteConfig,
   PaletteSeeds,
   TerminalColorName,
-  ThemeMode,
 } from "../types";
 
 const TERMINAL_COLOR_NAMES = [
@@ -66,75 +64,60 @@ export function normalizeHex(value: unknown, label: string): HexColor {
   }
 }
 
-const HexColorSchema = v.pipe(
-  v.string("must be a color string"),
-  v.rawTransform(({ dataset, addIssue, NEVER }) => {
-    try {
-      return normalizeHex(dataset.value, "color");
-    } catch {
-      addIssue({ message: "must be a valid opaque color" });
-      return NEVER;
-    }
-  }),
-);
-
-const SeedsSchema = v.strictObject({
-  surface: HexColorSchema,
-  neutral: HexColorSchema,
-  accent: HexColorSchema,
-  terminal: v.record(v.picklist(TERMINAL_COLOR_NAMES), HexColorSchema),
-  overrides: v.optional(v.record(v.picklist(PALETTE_COLOR_NAMES), HexColorSchema)),
-});
-
-const ConfigSchema = v.strictObject({
-  mode: v.picklist(["dark", "light"] satisfies ThemeMode[], 'must be "dark" or "light"'),
-  modes: v.strictObject({
-    dark: SeedsSchema,
-    light: SeedsSchema,
-  }),
-});
-
-const RecipeSchema = v.strictObject({
-  version: v.literal(1, "must be version 1"),
-  config: ConfigSchema,
-  colors: v.record(v.string(), HexColorSchema),
-});
-
-function validationError(
-  label: string,
-  issues: readonly {
-    message: string;
-    path?: readonly { key: unknown }[] | undefined;
-  }[],
-): TypeError {
-  const issue = issues[0];
-  const path = issue?.path?.map(({ key }) => String(key)).join(".");
-  return new TypeError(`${path ? `${label}.${path}` : label} ${issue?.message ?? "is invalid"}`);
+function record(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError(`${label} must be an object`);
+  }
+  return value as Record<string, unknown>;
 }
 
-const DEFAULT_SEEDS: Record<ThemeMode, PaletteSeeds> = {
-  dark: {
-    surface: "#111318",
-    neutral: "#8b8d98",
-    accent: "#3d63dd",
-    terminal: {},
-  },
-  light: {
-    surface: "#f9fafb",
-    neutral: "#8b8d98",
-    accent: "#3d63dd",
-    terminal: {},
-  },
-};
+function strict(value: Record<string, unknown>, keys: readonly string[], label: string): void {
+  const unknown = Object.keys(value).find((key) => !keys.includes(key));
+  if (unknown) throw new TypeError(`${label}.${unknown} is not allowed`);
+}
 
-export function defaultSeeds(mode: ThemeMode): PaletteSeeds {
-  return { ...DEFAULT_SEEDS[mode], terminal: {} };
+function colorRecord(
+  value: unknown,
+  keys: readonly string[],
+  label: string,
+): Record<string, HexColor> {
+  const input = record(value, label);
+  strict(input, keys, label);
+  return Object.entries(input).reduce<Record<string, HexColor>>((colors, [key, color]) => {
+    colors[key] = normalizeHex(color, `${label}.${key}`);
+    return colors;
+  }, {});
+}
+
+function seeds(value: unknown, label: string): PaletteSeeds {
+  const input = record(value, label);
+  strict(input, ["surface", "neutral", "accent", "terminal", "overrides"], label);
+  return {
+    surface: normalizeHex(input.surface, `${label}.surface`),
+    neutral: normalizeHex(input.neutral, `${label}.neutral`),
+    accent: normalizeHex(input.accent, `${label}.accent`),
+    terminal: colorRecord(input.terminal, TERMINAL_COLOR_NAMES, `${label}.terminal`),
+    ...(input.overrides === undefined
+      ? {}
+      : { overrides: colorRecord(input.overrides, PALETTE_COLOR_NAMES, `${label}.overrides`) }),
+  };
 }
 
 export function parseConfig(input: unknown): PaletteConfig {
-  const result = v.safeParse(ConfigSchema, input);
-  if (!result.success) throw validationError("config", result.issues);
-  return result.output as PaletteConfig;
+  const config = record(input, "config");
+  strict(config, ["mode", "modes"], "config");
+  if (config.mode !== "dark" && config.mode !== "light") {
+    throw new TypeError('config.mode must be "dark" or "light"');
+  }
+  const modes = record(config.modes, "config.modes");
+  strict(modes, ["dark", "light"], "config.modes");
+  return {
+    mode: config.mode,
+    modes: {
+      dark: seeds(modes.dark, "config.modes.dark"),
+      light: seeds(modes.light, "config.modes.light"),
+    },
+  };
 }
 
 export function parseRecipe(input: unknown): {
@@ -142,12 +125,13 @@ export function parseRecipe(input: unknown): {
   config: PaletteConfig;
   colors: Record<string, HexColor>;
 } {
-  const result = v.safeParse(RecipeSchema, input);
-  if (!result.success) throw validationError("recipe", result.issues);
-  return result.output as {
-    version: 1;
-    config: PaletteConfig;
-    colors: Record<string, HexColor>;
+  const recipe = record(input, "recipe");
+  strict(recipe, ["version", "config", "colors"], "recipe");
+  if (recipe.version !== 1) throw new TypeError("recipe.version must be version 1");
+  return {
+    version: 1,
+    config: parseConfig(recipe.config),
+    colors: colorRecord(recipe.colors, PALETTE_COLOR_NAMES, "recipe.colors"),
   };
 }
 

@@ -137,7 +137,7 @@ Before publication, Chromarchy adopted the ordinary single-repository layout:
 - root `manifest.json` with a nested `plugin/BarWidget.qml` entry point;
 - standard `omarchy plugin add ... --enable` installation;
 - explicit basic and complete removal instructions;
-- documented Node.js and bundled-library dependencies;
+- documented its system-Python helper and bundled-library dependencies;
 - root MIT license and manifest license/homepage metadata;
 - a 1600×900 root preview built from an actual popup capture.
 

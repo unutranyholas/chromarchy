@@ -47,25 +47,6 @@ export interface PaletteProposal {
   accentContrast: HexColor;
 }
 
-export interface ThemeState {
-  slug: string;
-  name: string;
-  mode: ThemeMode;
-  source: string;
-  target: string;
-  colors: Record<string, HexColor>;
-  config: PaletteConfig;
-  undoAvailable: boolean;
-}
-
-export interface MutationResult {
-  ok: true;
-  slug: string;
-  target: string;
-  updated: string[];
-  state: ThemeState;
-}
-
 export interface OmarchyPaletteColors {
   accent: HexColor;
   selection: HexColor;

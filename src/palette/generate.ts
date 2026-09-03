@@ -1,4 +1,4 @@
-import Color from "colorjs.io";
+import Color from "../color/color";
 
 import type {
   HexColor,

@@ -1,6 +1,6 @@
 import * as RadixColors from "@radix-ui/colors";
 import BezierEasing from "bezier-easing";
-import Color from "colorjs.io";
+import Color from "../color/color";
 
 import type { HexColor, ThemeMode } from "../types";
 import { normalizeHex } from "./parse";
@@ -119,7 +119,10 @@ const scaleCache = new Map<ThemeMode, Record<string, ArrayOf12<Color>>>();
 function allScales(mode: ThemeMode): Record<string, ArrayOf12<Color>> {
   let scales = scaleCache.get(mode);
   if (!scales) {
-    scales = Object.fromEntries(scaleNames.map((name) => [name, oklchScale(name, mode)]));
+    scales = scaleNames.reduce<Record<string, ArrayOf12<Color>>>((result, name) => {
+      result[name] = oklchScale(name, mode);
+      return result;
+    }, {});
     scaleCache.set(mode, scales);
   }
   return scales;
@@ -127,7 +130,10 @@ function allScales(mode: ThemeMode): Record<string, ArrayOf12<Color>> {
 
 function grayScales(mode: ThemeMode): Record<string, ArrayOf12<Color>> {
   const scales = allScales(mode);
-  return Object.fromEntries(grayScaleNames.map((name) => [name, scales[name]!]));
+  return grayScaleNames.reduce<Record<string, ArrayOf12<Color>>>((result, name) => {
+    result[name] = scales[name]!;
+    return result;
+  }, {});
 }
 
 function toHexScale(scale: ArrayOf12<Color>, label: string): ArrayOf12<HexColor> {
@@ -163,7 +169,7 @@ export function generateRadixColors({
   );
 
   const accentBaseHex = accentBaseColor.to("srgb").toString({ format: "hex" });
-  if (accentBaseHex === "#000" || accentBaseHex === "#fff") {
+  if (accentBaseHex === "#000000" || accentBaseHex === "#ffffff") {
     accentScaleColors = grayScaleColors.map((color) => color.clone()) as ArrayOf12<Color>;
   }
 

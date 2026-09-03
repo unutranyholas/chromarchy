@@ -5,7 +5,6 @@ Chromarchy bundles code from the following MIT-licensed projects:
 - [`@radix-ui/colors`](https://github.com/radix-ui/colors), Copyright (c) 2021 Radix;
 - [`colorjs.io`](https://github.com/color-js/color.js), Copyright (c) 2021 Lea Verou, Chris Lilley;
 - [`bezier-easing`](https://github.com/gre/bezier-easing), Copyright (c) 2014 Gaëtan Renaudeau;
-- [`valibot`](https://github.com/open-circle/valibot), Copyright (c) 2023 Fabian Hiller.
 
 The custom scale generator is adapted from the
 [`radix-ui/website`](https://github.com/radix-ui/website) implementation.

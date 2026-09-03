@@ -3,4 +3,4 @@
 set -eu
 
 plugin_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-exec /usr/bin/node "$plugin_dir/dist/chromarchy.mjs" "$@"
+exec /usr/bin/python3 -B "$plugin_dir/chromarchy.py" "$@"

@@ -18,7 +18,11 @@ Design and apply an Omarchy color palette from a compact topbar popup.
 omarchy plugin add https://github.com/unutranyholas/chromarchy --enable
 ```
 
-Requires Omarchy Quattro and Node.js 24 or newer at `/usr/bin/node`.
+Requires Omarchy Quattro. Chromarchy uses the system Python already included
+with Omarchy and installs no additional runtime packages.
+
+Node.js and pnpm are development-only tools used to rebuild and test the
+checked-in QML JavaScript bundle.
 
 ## Use
 
